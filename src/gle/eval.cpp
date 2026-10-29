@@ -774,7 +774,7 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				if (!std::isfinite(indexValue) || indexValue != floor(indexValue) || indexValue < 1.0 || indexValue > 1000000.0) {
 					g_throw_parser_error("array index must be a positive integer between 1 and 1000000");
 				}
-				if (!std::isfinite(varValue) || varValue != floor(varValue) || varValue < 0.0 || varValue > 268435455.0) {
+				if (!std::isfinite(varValue) || varValue != floor(varValue) || varValue < 0.0 || varValue > 536870911.0) {
 					g_throw_parser_error("invalid internal array variable index");
 				}
 				double value = getVarsInstance()->getArrayElement((int)varValue, (int)indexValue);
