@@ -455,7 +455,8 @@ void GLEVars::setArrayElement(int var, int index, double value) {
 	validateNativeArrayIndex(index);
 	GLEArrayImpl* array = getArray(var, true);
 	unsigned int oldSize = array->size();
-	array->ensure((unsigned int)index);
+	/* Resize the logical array length as well as its backing storage. */
+	array->resize((unsigned int)index);
 	/* Newly skipped elements must be numeric zero, not unknown cells. */
 	for (unsigned int i = oldSize; i < (unsigned int)index - 1; ++i) {
 		if (array->isUnknown(i)) array->setDouble(i, 0.0);
