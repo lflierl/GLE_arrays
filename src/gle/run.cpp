@@ -661,6 +661,23 @@ void GLERun::do_pcode(GLESourceLine &sline, int *srclin, int *pcode, int plen, i
 			readlong(jj);
 			getVars()->set(jj, evalGeneric(getStack(), getPcodeList(), pcode, &cp));
 			break;
+		  case 53: /* Native numeric array element assignment */
+			{
+				readlong(jj);
+				GLEMemoryCell* indexCell = evalGeneric(getStack(), getPcodeList(), pcode, &cp);
+				double indexValue = 0.0;
+				if (!gle_memory_cell_to_double(indexCell, &indexValue) || !std::isfinite(indexValue) || indexValue != floor(indexValue) || indexValue > 1000000.0 || indexValue < 1.0) {
+					g_throw_parser_error("array index must be a positive integer between 1 and 1000000");
+				}
+				int arrayIndex = (int)indexValue;
+				GLEMemoryCell* valueCell = evalGeneric(getStack(), getPcodeList(), pcode, &cp);
+				double arrayValue = 0.0;
+				if (!gle_memory_cell_to_double(valueCell, &arrayValue)) {
+					g_throw_parser_error("numeric array elements can only be assigned numeric values");
+				}
+				getVars()->setArrayElement(jj, arrayIndex, arrayValue);
+			}
+			break;
 		  case 5:  /* BEGIN box | path | scale | rotate | EXTERNAL */
 			g_flush();
 			i = *(pcode + cp++);
