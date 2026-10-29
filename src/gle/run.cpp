@@ -55,6 +55,8 @@
 #include "sub.h"
 #include "gle-interface/gle-interface.h"
 
+#include <cmath>
+
 void name_get2(char *n,double *x1,double *y1,double *x2,double *y2);
 
 #define GRAPHDEF extern
