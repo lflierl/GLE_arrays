@@ -381,7 +381,7 @@ GLEString* GLEVars::getString(int var) {
 
 GLEDataObject* GLEVars::getObject(int var) {
 	if (check(&var)) {
-		return NULL;
+		return (GLEDataObject*)local_var->values.getObject(var);
 	} else {
 		return (GLEDataObject*)m_Global.getObject(var);
 	}
@@ -397,10 +397,70 @@ void GLEVars::setString(int var, GLEString* s) {
 
 void GLEVars::setObject(int var, GLEDataObject* obj) {
 	if (check(&var)) {
-		// FIXME: no support for objects in local vars
+		local_var->values.setObject(var, obj);
 	} else {
 		m_Global.setObject(var, obj);
 	}
+}
+
+/* Return the array stored in a variable, creating it when requested. */
+GLEArrayImpl* GLEVars::getArray(int var, bool create) {
+	GLEDataObject* object = getObject(var);
+	if (object != NULL && object->getType() == GLEObjectTypeArray) {
+		return static_cast<GLEArrayImpl*>(object);
+	}
+	if (!create) {
+		return NULL;
+	}
+	GLEArrayImpl* array = new GLEArrayImpl();
+	setObject(var, array);
+	return array;
+}
+
+/* Array indices in GLE are one-based. Keep a hard limit to reject accidental
+ * huge allocations caused by an erroneous index expression. */
+static const int GLE_MAX_NATIVE_ARRAY_INDEX = 1000000;
+
+static void validateNativeArrayIndex(int index) {
+	if (index < 1 || index > GLE_MAX_NATIVE_ARRAY_INDEX) {
+		std::ostringstream msg;
+		msg << "array index " << index << " is invalid (expected 1.." << GLE_MAX_NATIVE_ARRAY_INDEX << ")";
+		g_throw_parser_error(msg.str());
+	}
+}
+
+double GLEVars::getArrayElement(int var, int index) {
+	validateNativeArrayIndex(index);
+	GLEArrayImpl* array = getArray(var, false);
+	if (array == NULL) {
+		std::ostringstream msg;
+		msg << "variable '" << getName(var) << "' is not an initialized array";
+		g_throw_parser_error(msg.str());
+	}
+	if (index > (int)array->size()) {
+		std::ostringstream msg;
+		msg << "array index " << index << " is out of range (array size is " << array->size() << ")";
+		g_throw_parser_error(msg.str());
+	}
+	GLEMemoryCell* cell = array->get(index - 1);
+	if (cell->Type != GLE_MC_DOUBLE && cell->Type != GLE_MC_INT) {
+		std::ostringstream msg;
+		msg << "array element " << index << " is not numeric";
+		g_throw_parser_error(msg.str());
+	}
+	return cell->Type == GLE_MC_DOUBLE ? cell->Entry.DoubleVal : (double)cell->Entry.IntVal;
+}
+
+void GLEVars::setArrayElement(int var, int index, double value) {
+	validateNativeArrayIndex(index);
+	GLEArrayImpl* array = getArray(var, true);
+	unsigned int oldSize = array->size();
+	array->ensure((unsigned int)index);
+	/* Newly skipped elements must be numeric zero, not unknown cells. */
+	for (unsigned int i = oldSize; i < (unsigned int)index - 1; ++i) {
+		if (array->isUnknown(i)) array->setDouble(i, 0.0);
+	}
+	array->setDouble((unsigned int)index - 1, value);
 }
 
 void GLEVars::init(int var, int type) {
