@@ -55,6 +55,8 @@
 #include "cmdline.h"
 #include "graph.h"
 #include "sub.h"
+
+#include <cmath>
 #include "file_io.h"
 #ifdef _WIN32
 #include <time.h>
