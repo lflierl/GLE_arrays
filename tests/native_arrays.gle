@@ -1,0 +1,27 @@
+! Manual acceptance test for native numeric arrays.
+! Expected visible labels:
+!   global sum = 30
+!   skipped element = 0
+!   local sum = 12
+
+a[1] = 10
+a[2] = 20
+a[5] = 50
+
+sum = a[1] + a[2]
+skipped = a[3]
+
+amove 1 1
+text "global sum = " + num$(sum)
+amove 1 2
+text "skipped element = " + num$(skipped)
+
+sub native_array_local_test
+    local b
+    b[1] = 5
+    b[2] = 7
+    amove 1 3
+    text "local sum = " + num$(b[1] + b[2])
+end sub
+
+native_array_local_test
