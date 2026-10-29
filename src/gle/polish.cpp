@@ -313,8 +313,15 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 			var_find((char*)uc_token.c_str(), &v, &ret);
 			if (v >= 0) {
 				//cout << "found var: '" << uc_token << "' -> " << v << " " <<ret<<endl;
-				if (ret == 2) pcode.addStrVar(v);
-				else pcode.addVar(v);
+				if (m_tokens.is_next_token("[")) {
+					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
+					pcode.addDouble((double)v);
+					get_array_index(pcode);
+					pcode.addFunction(141); // Native array element read
+				} else {
+					if (ret == 2) pcode.addStrVar(v);
+					else pcode.addVar(v);
+				}
 				unary = 2;
 				if (m_vars != NULL && m_vars->try_get(uc_token) == -1) {
 					/* Add it to list of vars */
@@ -356,8 +363,15 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 					throw error(token_col, "illegal variable name '"+uc_token+"'");
 				}
 				var_findadd((char*)uc_token.c_str(), &v, &ret);
-				if (ret == 2) pcode.addStrVar(v);
-				else pcode.addVar(v);
+				if (m_tokens.is_next_token("[")) {
+					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
+					pcode.addDouble((double)v);
+					get_array_index(pcode);
+					pcode.addFunction(141); // Native array element read
+				} else {
+					if (ret == 2) pcode.addStrVar(v);
+					else pcode.addVar(v);
+				}
 				not_string = true;
 				unary = 2;
 				if (m_vars != NULL && m_vars->try_get(uc_token) == -1) {
