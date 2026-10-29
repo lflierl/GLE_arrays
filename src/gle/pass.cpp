@@ -1297,6 +1297,19 @@ void GLEParser::passt(GLESourceLine &SLine, GLEPcode& pcode) {
 					}
 				}
 			} else if (
+				tokens->is_next_token("[")
+			) {
+				// Native array element assignment: name[index] = expression
+				checkValidName(first, "variable", pos_first);
+				pcode.addInt(53);
+				var_findadd((char*)first.c_str(), &vidx, &vtype);
+				if (vtype == 2) throw error(pos_first, "string variables cannot be indexed as numeric arrays");
+				pcode.addInt(vidx);
+				get_exp(pcode);
+				if (!tokens->is_next_token("]")) throw error("expected ']' after array index");
+				if (!tokens->is_next_token("=")) throw error("expected '=' after array index");
+				polish_eol(pcode, &vtype);
+			} else if (
 				tokens->is_next_token("=")
 			) {
 				// Variable assignment
