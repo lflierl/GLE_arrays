@@ -663,7 +663,7 @@ void GLERun::do_pcode(GLESourceLine &sline, int *srclin, int *pcode, int plen, i
 			readlong(jj);
 			getVars()->set(jj, evalGeneric(getStack(), getPcodeList(), pcode, &cp));
 			break;
-		  case 53: /* Native numeric array element assignment */
+		  case 57: /* Native numeric array element assignment */
 			{
 				readlong(jj);
 				GLEMemoryCell* indexCell = evalGeneric(getStack(), getPcodeList(), pcode, &cp);
