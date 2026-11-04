@@ -14,7 +14,7 @@ env:
   BUILD_TYPE: Release
   TRIPLET: x64-windows-static-release
   MY_VCPKG_ROOT: d:/vp
-  VCPKG_BINARY_SOURCES: "clear;nuget,https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json,readwrite"
+ 
 
 jobs:
   build:
