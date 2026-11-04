@@ -767,7 +767,7 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				setEvalStack(stk, stk->last(), pt.getY());
 			}
 			break;
-		case 141: /* Native numeric array element read; stack: variable index, array index */
+		case 142: /* Native numeric array element read; stack: variable index, array index */
 			{
 				double indexValue = getEvalStackDouble(stk, stk->last());
 				double varValue = getEvalStackDouble(stk, stk->last()-1);
