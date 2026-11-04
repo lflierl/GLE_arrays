@@ -317,7 +317,7 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
 					pcode.addDouble((double)v);
 					get_array_index(pcode);
-					pcode.addFunction(141); // Native array element read
+					pcode.addFunction(142); // Native array element read
 				} else {
 					if (ret == 2) pcode.addStrVar(v);
 					else pcode.addVar(v);
@@ -367,7 +367,7 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
 					pcode.addDouble((double)v);
 					get_array_index(pcode);
-					pcode.addFunction(141); // Native array element read
+					pcode.addFunction(142); // Native array element read
 				} else {
 					if (ret == 2) pcode.addStrVar(v);
 					else pcode.addVar(v);
