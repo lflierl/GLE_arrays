@@ -47,15 +47,7 @@ jobs:
       run: "${{env.MY_VCPKG_ROOT}}/bootstrap-vcpkg.bat"
       shell: cmd
 
-    - name: Configure NuGet Source for Caching
-      shell: pwsh
-      env:
-        GH_PAT: ${{ secrets.GLE_NUGET_CACHE_PAT }}
-        MY_VCPKG_ROOT: ${{ env.MY_VCPKG_ROOT }}
-      run: |
-        $nugetPath = & "$env:MY_VCPKG_ROOT/vcpkg" fetch nuget
-        & $nugetPath sources Add -Name github -Source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" -Username "${{ github.repository_owner }}" -Password "$env:GH_PAT"
-
+    
       # Ghostscript and GhostPDL header files needed for building of GLE
     - name: Setup Ghostscript
       uses: ./.github/actions/setup-ghostscript-win
