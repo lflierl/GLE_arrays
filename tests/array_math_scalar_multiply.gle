@@ -1,0 +1,24 @@
+size 12 12
+
+! Source array
+a[1] = 10
+a[2] = 20
+a[3] = 30
+
+! Scalar multiplication: both operand orders
+b = 2*a
+c = a*2
+
+! Expected: 20, 40, 60, 20, 40, 60
+print(b[1])
+print(b[2])
+print(b[3])
+
+print(c[1])
+print(c[2])
+print(c[3])
+
+! Confirm that the source array was not modified
+print(a[1])
+print(a[2])
+print(a[3])
