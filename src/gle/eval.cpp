@@ -430,13 +430,41 @@ void eval_unary_operator(GLEArrayImpl* stk, int op)
 	//stk->decrementSize(1);
 }
 
+/* Apply scalar multiplication to every element of a native numeric array.
+ * The source array is never modified; the expression produces a new array. */
+void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell* arrayCell, double scalar, bool scalarOnLeft) {
+	if (op != BIN_OP_MULTIPLY) {
+		complain_operator_type(op, GLEObjectTypeArray);
+		return;
+	}
+	GLEArrayImpl* source = static_cast<GLEArrayImpl*>(arrayCell->Entry.ObjectVal);
+	GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+	result->resize(source->size());
+	for (unsigned int i = 0; i < source->size(); ++i) {
+		GLEMemoryCell* element = source->get(i);
+		if (element->Type != GLE_MC_DOUBLE && element->Type != GLE_MC_INT) {
+			std::ostringstream msg;
+			msg << "array arithmetic requires numeric elements (element " << (i + 1) << ")";
+			g_throw_parser_error(msg.str());
+		}
+		double value = element->Type == GLE_MC_DOUBLE ? element->Entry.DoubleVal : (double)element->Entry.IntVal;
+		double product = scalarOnLeft ? scalar * value : value * scalar;
+		result->setDouble(i, product);
+	}
+	setEvalStack(stk, stk->last() - 1, result.get());
+}
+
 void eval_binary_operator(GLEArrayImpl* stk, int op) {
 	// a OP b
 	GLEMemoryCell* a = stk->get(stk->last() - 1);
 	int a_type = gle_memory_cell_type(a);
 	GLEMemoryCell* b = stk->get(stk->last());
 	int b_type = gle_memory_cell_type(b);
-	if (a_type == b_type) {
+	if (a_type == GLEObjectTypeArray && b_type == GLEObjectTypeDouble) {
+		eval_binary_operator_array_scalar(stk, op, a, b->Entry.DoubleVal, false);
+	} else if (a_type == GLEObjectTypeDouble && b_type == GLEObjectTypeArray) {
+		eval_binary_operator_array_scalar(stk, op, b, a->Entry.DoubleVal, true);
+	} else if (a_type == b_type) {
 		switch (a_type) {
 			case GLEObjectTypeDouble:
 				eval_binary_operator_double(stk, op, a->Entry.DoubleVal, b->Entry.DoubleVal);
