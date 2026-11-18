@@ -430,10 +430,10 @@ void eval_unary_operator(GLEArrayImpl* stk, int op)
 	//stk->decrementSize(1);
 }
 
-/* Apply scalar multiplication to every element of a native numeric array.
+/* Apply scalar addition or multiplication to every element of a native numeric array.
  * The source array is never modified; the expression produces a new array. */
 void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell* arrayCell, double scalar, bool scalarOnLeft) {
-	if (op != BIN_OP_MULTIPLY) {
+	if (op != BIN_OP_PLUS && op != BIN_OP_MULTIPLY) {
 		complain_operator_type(op, GLEObjectTypeArray);
 		return;
 	}
@@ -448,8 +448,13 @@ void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell*
 			g_throw_parser_error(msg.str());
 		}
 		double value = element->Type == GLE_MC_DOUBLE ? element->Entry.DoubleVal : (double)element->Entry.IntVal;
-		double product = scalarOnLeft ? scalar * value : value * scalar;
-		result->setDouble(i, product);
+		double calculated = 0.0;
+		if (op == BIN_OP_PLUS) {
+			calculated = scalar + value;
+		} else {
+			calculated = scalarOnLeft ? scalar * value : value * scalar;
+		}
+		result->setDouble(i, calculated);
 	}
 	setEvalStack(stk, stk->last() - 1, result.get());
 }
