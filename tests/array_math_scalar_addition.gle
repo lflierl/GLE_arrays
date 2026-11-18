@@ -1,0 +1,30 @@
+size 12 12
+
+! Source array
+a[1] = 10
+a[2] = 20
+a[3] = 30
+
+! Scalar addition: both operand orders
+b = a + 2
+c = 2 + a
+
+! Expected: 12, 22, 32, 12, 22, 32
+print(b[1])
+print(b[2])
+print(b[3])
+
+print(c[1])
+print(c[2])
+print(c[3])
+
+! Confirm that the source array was not modified
+print(a[1])
+print(a[2])
+print(a[3])
+
+! Fractional scalar
+d = a + 0.5
+print(d[1])
+print(d[2])
+print(d[3])
