@@ -376,11 +376,17 @@ endif()
 # -- GHOSTscript or GHOSTPDL include directory only since gle links to installed version at runtime
 #
 find_path(GDIR1 iapi.h PATHS ${GHOSTPDL_ROOT} PATH_SUFFIXES psi base devices ghostscript )
-list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR1} )
+if(GDIR1)
+	list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR1})
+endif()
 find_path(GDIR2 gdevdsp.h PATHS ${GHOSTPDL_ROOT} PATH_SUFFIXES psi base devices ghostscript )
-list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR2} )
+if(GDIR2)
+	list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR2})
+endif()
 find_path(GDIR3 gserrors.h PATHS ${GHOSTPDL_ROOT} PATH_SUFFIXES psi base devices ghostscript )
-list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR3} )
+if(GDIR3)
+	list(APPEND GHOSTPDL_INCLUDE_DIRS ${GDIR3})
+endif()
 message(STATUS "GHOSTPDL_INCLUDE_DIRS: ${GHOSTPDL_INCLUDE_DIRS}")
 
 include_directories(
