@@ -1,0 +1,17 @@
+size 12 8
+
+! Plot two native numeric arrays as a regular GLE dataset.
+x[1] = 1
+x[2] = 2
+x[3] = 3
+x[4] = 4
+y[1] = 1.2
+y[2] = 2.8
+y[3] = 2.1
+y[4] = 4.5
+
+begin graph
+    arraydata d1 x y
+    d1 line
+    d1 marker
+end graph
