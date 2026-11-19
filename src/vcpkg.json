@@ -7,7 +7,6 @@
     },
     "ecm",
     "freetype",
-    "glib",
     "libdeflate",
     "libiconv",
     "libpng",
