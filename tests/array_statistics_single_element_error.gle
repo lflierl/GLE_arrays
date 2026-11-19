@@ -1,0 +1,5 @@
+size 12 12
+
+! Sample standard deviation is undefined for a single observation.
+a[1] = 42
+print(SD(a))
