@@ -1,0 +1,9 @@
+size 12 12
+
+a[1] = 42
+
+b = SORT(a)
+
+! Expected: 42
+print(b[1])
+print(LEN(b))
