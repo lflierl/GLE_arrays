@@ -1,0 +1,10 @@
+size 12 12
+
+! Non-divisible interval: endpoint is not forced into the sequence.
+! SEQ(0, 1, 0.3) -> 0, 0.3, 0.6, 0.9
+a = SEQ(0, 1, 0.3)
+print(LEN(a))
+print(a[1])
+print(a[2])
+print(a[3])
+print(a[4])
