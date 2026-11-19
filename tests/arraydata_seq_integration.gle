@@ -1,0 +1,11 @@
+size 12 8
+
+! Generate x values and derive y values using array arithmetic.
+x = SEQ(0, 1, 0.25)
+y = x * x
+
+begin graph
+    arraydata d1 x y
+    d1 line
+    d1 marker
+end graph
