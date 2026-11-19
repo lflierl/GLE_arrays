@@ -84,6 +84,7 @@ int g_nbar = 0;
 GLERC<GLEColor> g_graph_background;
 
 int freedataset(int i);
+static bool g_arrayDataSet[MAX_NB_DATA] = { false };
 void free_temp(void);
 void set_sizelength(void);
 void draw_graph(KeyInfo* keyinfo, GLEGraphBlockInstance* graphBlock);
@@ -94,6 +95,7 @@ bool do_remaining_entries(int ct, bool isCommandCheck);
 void graph_freebars();
 double get_next_exp(TOKENS tk,int ntk,int *curtok);
 void data_command(GLESourceLine& sline);
+void array_data_command(GLESourceLine& sline);
 void do_discontinuity();
 void do_bar(int& ct, GLEGraphBlockInstance* graphBlock);
 void do_fill(int& ct, GLEGraphBlockInstance* graphBlock);
@@ -455,6 +457,7 @@ void begin_graph(GLEGraphBlockBase* graphBlockBase, GLEGraphBlockInstance* graph
 	g_get_usersize(&g_xsize,&g_ysize);
 	g_get_hei(&g_fontsz);
 	set_sizelength();
+	for (int i = 0; i < MAX_NB_DATA; ++i) g_arrayDataSet[i] = false;
 	dp[0] = new GLEDataSet(0);  /* dataset for default settings */
 }
 
@@ -471,6 +474,9 @@ bool execute_graph(GLESourceLine& sline, bool isCommandCheck, GLEGraphBlockInsta
 	} else if (str_i_equals(tk[ct],"DATA")) {
 		if (isCommandCheck) return true;
 		data_command(sline);
+	} else if (str_i_equals(tk[ct],"ARRAYDATA")) {
+		if (isCommandCheck) return true;
+		array_data_command(sline);
 	} else kw("FILL") {
 		if (isCommandCheck) return true;
 		do_fill(ct, graphBlock);
@@ -2035,6 +2041,76 @@ void createDataSet(int dn) {
 	}
 }
 
+void array_data_command(GLESourceLine& sline) {
+	if (ntk != 4) {
+		g_throw_parser_error("ARRAYDATA syntax: ARRAYDATA d1 x_array y_array");
+	}
+	int dn = get_dataset_identifier(std::string(tk[2]), false);
+	if (dn == 0) {
+		g_throw_parser_error("ARRAYDATA requires a dataset identifier greater than d0");
+	}
+
+	GLEVars* vars = getVarsInstance();
+	int xVar = -1, xType = 0;
+	int yVar = -1, yType = 0;
+	vars->find(tk[3], &xVar, &xType);
+	vars->find(tk[4], &yVar, &yType);
+	if (xVar == -1) {
+		g_throw_parser_error("ARRAYDATA: variable '", tk[3], "' not found");
+	}
+	if (yVar == -1) {
+		g_throw_parser_error("ARRAYDATA: variable '", tk[4], "' not found");
+	}
+	GLEArrayImpl* xArray = vars->getArray(xVar, false);
+	GLEArrayImpl* yArray = vars->getArray(yVar, false);
+	if (xArray == NULL) {
+		g_throw_parser_error("ARRAYDATA: variable '", tk[3], "' is not an initialized numeric array");
+	}
+	if (yArray == NULL) {
+		g_throw_parser_error("ARRAYDATA: variable '", tk[4], "' is not an initialized numeric array");
+	}
+	if (xArray->size() == 0 || yArray->size() == 0) {
+		g_throw_parser_error("ARRAYDATA does not support empty arrays");
+	}
+	if (xArray->size() != yArray->size()) {
+		ostringstream err;
+		err << "ARRAYDATA arrays have different lengths (" << xArray->size() << " <> " << yArray->size() << ")";
+		g_throw_parser_error(err.str());
+	}
+
+	if (dp[dn] != NULL && !dp[dn]->undefined()) {
+		ostringstream err;
+		err << "ARRAYDATA: dataset d" << dn << " already contains data";
+		g_throw_parser_error(err.str());
+	}
+
+	unsigned int np = xArray->size();
+	std::vector<double> xValues(np), yValues(np);
+	for (unsigned int i = 0; i < np; ++i) {
+		xValues[i] = vars->getArrayElement(xVar, i + 1);
+		yValues[i] = vars->getArrayElement(yVar, i + 1);
+	}
+
+	createDataSet(dn);
+	GLEDataSet* dataset = dp[dn];
+	dataset->clearAll();
+	dataset->np = np;
+	GLEArrayImpl* dimensions = dataset->getData();
+	dimensions->ensure(2);
+	GLEArrayImpl* xData = new GLEArrayImpl();
+	GLEArrayImpl* yData = new GLEArrayImpl();
+	dimensions->setObject(0, xData);
+	dimensions->setObject(1, yData);
+	xData->ensure(np);
+	yData->ensure(np);
+	for (unsigned int i = 0; i < np; ++i) {
+		xData->setDouble(i, xValues[i]);
+		yData->setDouble(i, yValues[i]);
+	}
+	ensureDataSetCreatedAndSetUsed(dn);
+	g_arrayDataSet[dn] = true;
+}
+
 string dimension2String(unsigned int dimension) {
 	if (dimension == 0) {
 		return "x";
@@ -2129,6 +2205,15 @@ void data_command(GLESourceLine& sline) {
 			dataset.setColumnIdx(0, cx);
 			dataset.setColumnIdx(1, i + cyOffs + 1);
 			description.addDataSet(dataset);
+		}
+	}
+	// Do not allow file-based DATA to overwrite a dataset created by ARRAYDATA.
+	for (int i = 0; i < description.getNbDataSets(); ++i) {
+		int dn = description.getDataSet(i)->ds;
+		if (dn > 0 && dn < MAX_NB_DATA && g_arrayDataSet[dn]) {
+			ostringstream err;
+			err << "DATA: dataset d" << dn << " is already defined by ARRAYDATA";
+			g_throw_parser_error(err.str());
 		}
 	}
 	// Construct names data set
