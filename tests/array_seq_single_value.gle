@@ -1,0 +1,6 @@
+size 12 12
+
+! Equal start and end produces a one-element array.
+a = SEQ(2.5, 2.5)
+print(LEN(a))
+print(a[1])
