@@ -60,7 +60,10 @@ jobs:
           restore-keys: |
             vcpkg-windows-${{ env.TRIPLET }}-${{ hashFiles('src/vcpkg.json') }}-
 
+      # Ghostscript is only needed for the complete distribution. Array tests
+      # run against the CLI executable and do not need the external renderer.
       - name: Setup Ghostscript
+        if: ${{ inputs.build_mode == 'full' }}
         uses: ./.github/actions/setup-ghostscript-win
         with:
           checkout-ghostpdl: "true"
@@ -90,7 +93,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           cmake --build build --config ${{ env.BUILD_TYPE }} --target gle glerc_file --parallel 4
-          cmake --build build --config ${{ env.BUILD_TYPE }} --target inittex --parallel 4
+          New-Item -ItemType Directory -Force -Path stage\bin | Out-Null
+          Copy-Item build\gle\Release\gle.exe stage\bin\gle.exe
+          Copy-Item build\gle\glerc stage\glerc
         shell: cmd
 
       - name: Build all enabled targets
@@ -100,7 +105,8 @@ jobs:
           cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 4
         shell: cmd
 
-      - name: Install
+      - name: Install full CLI distribution
+        if: ${{ inputs.build_mode == 'full' }}
         working-directory: ${{ github.workspace }}
         run: |
           cmake --install build --config ${{ env.BUILD_TYPE }}
