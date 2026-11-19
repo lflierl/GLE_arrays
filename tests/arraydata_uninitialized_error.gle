@@ -1,0 +1,9 @@
+size 12 8
+
+y[1] = 1
+y[2] = 2
+
+begin graph
+    arraydata d1 x y
+    d1 line
+end graph
