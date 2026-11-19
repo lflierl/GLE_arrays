@@ -2042,6 +2042,7 @@ void createDataSet(int dn) {
 }
 
 void array_data_command(GLESourceLine& sline) {
+	(void)sline;
 	if (ntk != 4) {
 		g_throw_parser_error("ARRAYDATA syntax: ARRAYDATA d1 x_array y_array");
 	}
@@ -2055,6 +2056,8 @@ void array_data_command(GLESourceLine& sline) {
 	int yVar = -1, yType = 0;
 	vars->find(tk[3], &xVar, &xType);
 	vars->find(tk[4], &yVar, &yType);
+	(void)xType;
+	(void)yType;
 	if (xVar == -1) {
 		g_throw_parser_error("ARRAYDATA: variable '", tk[3], "' not found");
 	}
