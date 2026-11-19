@@ -93,9 +93,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           cmake --build build --config ${{ env.BUILD_TYPE }} --target gle glerc_file --parallel 4
-          New-Item -ItemType Directory -Force -Path stage\bin | Out-Null
-          Copy-Item build\gle\Release\gle.exe stage\bin\gle.exe
-          Copy-Item build\gle\glerc stage\glerc
+          if not exist stage\bin mkdir stage\bin
+          copy /Y build\gle\Release\gle.exe stage\bin\gle.exe
+          copy /Y build\gle\glerc stage\glerc
         shell: cmd
 
       - name: Build all enabled targets
