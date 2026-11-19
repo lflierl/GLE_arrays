@@ -12,11 +12,8 @@
     "libiconv",
     "libpng",
     "openjpeg",
-    "pdcurses",
     "pixman",
     "poppler",
-    "qtbase",
-    "qtimageformats",
     "tiff",
     "zlib",
     "zstd"
