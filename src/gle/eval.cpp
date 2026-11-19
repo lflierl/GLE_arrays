@@ -1003,8 +1003,10 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 			if (gle_memory_cell_type(stk->get(stk->last())) == GLEObjectTypeArray) {
 				GLEArrayImpl* array = static_cast<GLEArrayImpl*>(stk->get(stk->last())->Entry.ObjectVal);
 				setEvalStack(stk, stk->last(), (int)array->size());
-			} else {
+			} else if (gle_memory_cell_type(stk->get(stk->last())) == GLEObjectTypeString) {
 				setEvalStack(stk, stk->last(), (int)getEvalStackGLEString(stk, stk->last())->length());
+			} else {
+				g_throw_parser_error("LEN requires a string or native array");
 			}
 			break;
 		case 73: /* log */
