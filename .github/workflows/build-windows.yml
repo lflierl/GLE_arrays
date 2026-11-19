@@ -61,6 +61,11 @@ jobs:
 
       # Ghostscript is only needed for the complete distribution. Array tests
       # run against the CLI executable and do not need the external renderer.
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
       - name: Setup Ghostscript
         if: ${{ inputs.build_mode == 'full' }}
         uses: ./.github/actions/setup-ghostscript-win
