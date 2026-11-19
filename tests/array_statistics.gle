@@ -1,0 +1,37 @@
+size 12 12
+
+! Native array statistics
+a[1] = 4
+a[2] = 1
+a[3] = 3
+a[4] = 2
+
+! Expected:
+! LEN(a) = 4
+! LEN("hello") = 5
+! SUM(a) = 10
+! MEAN(a) = 2.5
+! MIN(a) = 1
+! MAX(a) = 4
+! MEDIAN(a) = 2.5
+! VAR(a) = 1.6666666667 (sample variance, n-1)
+! SD(a) = 1.2909944487 (sample standard deviation, n-1)
+print(LEN(a))
+print(LEN("hello"))
+print(SUM(a))
+print(MEAN(a))
+print(MIN(a))
+print(MAX(a))
+print(MEDIAN(a))
+print(VAR(a))
+print(SD(a))
+
+! Existing two-argument scalar MIN/MAX remain available
+print(MIN(7, 3))
+print(MAX(7, 3))
+
+! Source array must remain unchanged
+print(a[1])
+print(a[2])
+print(a[3])
+print(a[4])
