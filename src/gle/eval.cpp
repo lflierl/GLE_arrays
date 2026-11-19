@@ -807,6 +807,32 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 		case FN_BUILTIN_MAGIC + FN_SD: /* sample standard deviation */
 			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 5));
 			break;
+		case FN_BUILTIN_MAGIC + FN_SORT: /* sort a native numeric array */
+			{
+				/* With one argument the array is the top stack item. With two
+				 * arguments the direction is on top and the array is below it. */
+				int arrayPos = stk->last();
+				double direction = 1.0;
+				if (gle_memory_cell_type(stk->get(arrayPos)) != GLEObjectTypeArray) {
+					direction = getEvalStackDouble(stk, arrayPos);
+					if (direction != 1.0 && direction != -1.0) {
+						g_throw_parser_error("SORT direction must be 1 (ascending) or -1 (descending)");
+					}
+					--arrayPos;
+				}
+				std::vector<double> values = eval_get_numeric_array(stk->get(arrayPos));
+				std::sort(values.begin(), values.end());
+				if (direction < 0.0) std::reverse(values.begin(), values.end());
+
+				GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+				result->resize((unsigned int)values.size());
+				for (unsigned int i = 0; i < values.size(); ++i) {
+					result->setDouble(i, values[i]);
+				}
+				setEvalStack(stk, arrayPos, result.get());
+				if (arrayPos != stk->last()) stk->decrementSize(1);
+			}
+			break;
 		case FN_BUILTIN_MAGIC + FN_SDIV: /* sdiv */
 			if (getEvalStackDouble(stk, stk->last()) == 0.0) setEvalStack(stk, stk->last()-1, 0.0);
 			else setEvalStack(stk, stk->last()-1, getEvalStackDouble(stk, stk->last()-1) / getEvalStackDouble(stk, stk->last()));
