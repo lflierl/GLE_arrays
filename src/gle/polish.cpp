@@ -233,7 +233,8 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 				// it is a built in function (do built in functions have default or optional arguments??)
 				//
 				dbg gprint("Found built in function\n");
-				get_params(pcode, np, plist, uc_token);
+				int optional_params = (idx == FN_MIN || idx == FN_MAX) ? 1 : 0;
+				get_params(pcode, np, plist, uc_token, optional_params);
 				pcode.addFunction(idx + FN_BUILTIN_MAGIC);
 				unary = 2;
 				break;
