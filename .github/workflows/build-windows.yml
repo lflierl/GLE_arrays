@@ -89,6 +89,7 @@ jobs:
         if: ${{ inputs.build_mode == 'development' }}
         working-directory: ${{ github.workspace }}
         run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --target gle glerc_file --parallel 4
           cmake --build build --config ${{ env.BUILD_TYPE }} --target inittex --parallel 4
         shell: cmd
 
