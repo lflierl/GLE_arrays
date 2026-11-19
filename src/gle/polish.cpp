@@ -233,9 +233,11 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 				// it is a built in function (do built in functions have default or optional arguments??)
 				//
 				dbg gprint("Found built in function\n");
-				int optional_params = (idx == FN_MIN || idx == FN_MAX || idx == FN_SORT) ? 1 : 0;
-				get_params(pcode, np, plist, uc_token, optional_params);
+				int optional_params = (idx == FN_MIN || idx == FN_MAX || idx == FN_SORT || idx == FN_SEQ) ? 1 : 0;
+				int nb_params = get_params(pcode, np, plist, uc_token, optional_params);
 				pcode.addFunction(idx + FN_BUILTIN_MAGIC);
+				/* SEQ needs its actual argument count because all arguments are numeric. */
+				if (idx == FN_SEQ) pcode.addInt(nb_params);
 				unary = 2;
 				break;
 			} else if (idx > 0 && idx <= 3) {
