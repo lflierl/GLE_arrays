@@ -84,11 +84,11 @@
 #define FN_CHEBYSHEV_FIRST      118
 #define FN_CHEBYSHEV_SECOND     119
 #define FN_TEST_PRINT			120
-#define FN_SUM                 121
-#define FN_MEAN                122
-#define FN_MEDIAN              123
-#define FN_SD                  124
-#define FN_VAR                 125
+#define FN_SUM                 140
+#define FN_MEAN                141
+#define FN_MEDIAN              142
+#define FN_SD                  143
+#define FN_VAR                 144
 
 struct keyw {
 	const char *word;
