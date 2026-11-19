@@ -57,6 +57,8 @@
 #include "sub.h"
 
 #include <cmath>
+#include <algorithm>
+#include <vector>
 #include "file_io.h"
 #ifdef _WIN32
 #include <time.h>
@@ -501,6 +503,56 @@ void eval_binary_operator_array_array(GLEArrayImpl* stk, int op, GLEMemoryCell* 
 	}
 	setEvalStack(stk, stk->last() - 1, result.get());
 }
+
+/* Extract a native array as doubles for statistical functions. */
+std::vector<double> eval_get_numeric_array(GLEMemoryCell* cell) {
+	if (gle_memory_cell_type(cell) != GLEObjectTypeArray) {
+		g_throw_parser_error("statistical functions require a native numeric array");
+	}
+	GLEArrayImpl* array = static_cast<GLEArrayImpl*>(cell->Entry.ObjectVal);
+	std::vector<double> values;
+	values.reserve(array->size());
+	for (unsigned int i = 0; i < array->size(); ++i) {
+		GLEMemoryCell* element = array->get(i);
+		if (element->Type != GLE_MC_DOUBLE && element->Type != GLE_MC_INT) {
+			std::ostringstream msg;
+			msg << "statistical functions require numeric elements (element " << (i + 1) << ")";
+			g_throw_parser_error(msg.str());
+		}
+		values.push_back(element->Type == GLE_MC_DOUBLE ? element->Entry.DoubleVal : (double)element->Entry.IntVal);
+	}
+	return values;
+}
+
+double eval_array_statistic(GLEArrayImpl* stk, int operation) {
+	std::vector<double> values = eval_get_numeric_array(stk->get(stk->last()));
+	if (values.empty()) {
+		g_throw_parser_error("statistical functions are not defined for empty arrays");
+	}
+	double result = 0.0;
+	if (operation == 1) { // sum
+		for (double value : values) result += value;
+	} else if (operation == 2) { // mean
+		for (double value : values) result += value;
+		result /= values.size();
+	} else if (operation == 3) { // median
+		std::sort(values.begin(), values.end());
+		size_t n = values.size();
+		result = (n % 2 == 1) ? values[n / 2] : (values[n / 2 - 1] + values[n / 2]) / 2.0;
+	} else if (operation == 4 || operation == 5) { // sample variance / sample SD
+		if (values.size() < 2) {
+			g_throw_parser_error("sample variance and standard deviation require at least two elements");
+		}
+		double mean = 0.0;
+		for (double value : values) mean += value;
+		mean /= values.size();
+		for (double value : values) result += (value - mean) * (value - mean);
+		result /= (values.size() - 1);
+		if (operation == 5) result = std::sqrt(result);
+	}
+	return result;
+}
+
 void eval_binary_operator(GLEArrayImpl* stk, int op) {
 	// a OP b
 	GLEMemoryCell* a = stk->get(stk->last() - 1);
@@ -719,12 +771,39 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 			setEvalStack(stk, stk->last(), g_CmdLine.getNbExtraArgs());
 			break;
 		case FN_BUILTIN_MAGIC + FN_MIN: /* min */
-			stk->decrementSize(1);
-			if (getEvalStackDouble(stk, stk->last()+1) < getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
+			if (gle_memory_cell_type(stk->get(stk->last())) == GLEObjectTypeArray) {
+				std::vector<double> values = eval_get_numeric_array(stk->get(stk->last()));
+				if (values.empty()) g_throw_parser_error("MIN is not defined for an empty array");
+				setEvalStack(stk, stk->last(), *std::min_element(values.begin(), values.end()));
+			} else {
+				stk->decrementSize(1);
+				if (getEvalStackDouble(stk, stk->last()+1) < getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
+			}
 			break;
 		case FN_BUILTIN_MAGIC + FN_MAX: /* max */
-			stk->decrementSize(1);
-			if (getEvalStackDouble(stk, stk->last()+1) > getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
+			if (gle_memory_cell_type(stk->get(stk->last())) == GLEObjectTypeArray) {
+				std::vector<double> values = eval_get_numeric_array(stk->get(stk->last()));
+				if (values.empty()) g_throw_parser_error("MAX is not defined for an empty array");
+				setEvalStack(stk, stk->last(), *std::max_element(values.begin(), values.end()));
+			} else {
+				stk->decrementSize(1);
+				if (getEvalStackDouble(stk, stk->last()+1) > getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
+			}
+			break;
+		case FN_BUILTIN_MAGIC + FN_SUM: /* sum */
+			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 1));
+			break;
+		case FN_BUILTIN_MAGIC + FN_MEAN: /* mean */
+			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 2));
+			break;
+		case FN_BUILTIN_MAGIC + FN_MEDIAN: /* median */
+			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 3));
+			break;
+		case FN_BUILTIN_MAGIC + FN_VAR: /* sample variance */
+			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 4));
+			break;
+		case FN_BUILTIN_MAGIC + FN_SD: /* sample standard deviation */
+			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 5));
 			break;
 		case FN_BUILTIN_MAGIC + FN_SDIV: /* sdiv */
 			if (getEvalStackDouble(stk, stk->last()) == 0.0) setEvalStack(stk, stk->last()-1, 0.0);
@@ -921,7 +1000,12 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 			}
 			break;
 		case 72: /* len */
-			setEvalStack(stk, stk->last(), (int)getEvalStackGLEString(stk, stk->last())->length());
+			if (gle_memory_cell_type(stk->get(stk->last())) == GLEObjectTypeArray) {
+				GLEArrayImpl* array = static_cast<GLEArrayImpl*>(stk->get(stk->last())->Entry.ObjectVal);
+				setEvalStack(stk, stk->last(), (int)array->size());
+			} else {
+				setEvalStack(stk, stk->last(), (int)getEvalStackGLEString(stk, stk->last())->length());
+			}
 			break;
 		case 73: /* log */
 			setEvalStack(stk, stk->last(), log(getEvalStackDouble(stk, stk->last())));
