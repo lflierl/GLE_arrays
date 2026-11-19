@@ -23,7 +23,6 @@ env:
   BUILD_TYPE: Release
   TRIPLET: x64-windows-static-release
   VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-binary-cache
-  BUILD_MODE: ${{ inputs.build_mode }}
 
 jobs:
   build:
