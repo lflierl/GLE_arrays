@@ -430,10 +430,10 @@ void eval_unary_operator(GLEArrayImpl* stk, int op)
 	//stk->decrementSize(1);
 }
 
-/* Apply scalar addition or multiplication to every element of a native numeric array.
+/* Apply an element-wise arithmetic operation to a native numeric array and a scalar.
  * The source array is never modified; the expression produces a new array. */
 void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell* arrayCell, double scalar, bool scalarOnLeft) {
-	if (op != BIN_OP_PLUS && op != BIN_OP_MULTIPLY) {
+	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE) {
 		complain_operator_type(op, GLEObjectTypeArray);
 		return;
 	}
@@ -448,17 +448,59 @@ void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell*
 			g_throw_parser_error(msg.str());
 		}
 		double value = element->Type == GLE_MC_DOUBLE ? element->Entry.DoubleVal : (double)element->Entry.IntVal;
+		double left = scalarOnLeft ? scalar : value;
+		double right = scalarOnLeft ? value : scalar;
 		double calculated = 0.0;
-		if (op == BIN_OP_PLUS) {
-			calculated = scalar + value;
-		} else {
-			calculated = scalarOnLeft ? scalar * value : value * scalar;
+		switch (op) {
+			case BIN_OP_PLUS: calculated = left + right; break;
+			case BIN_OP_MINUS: calculated = left - right; break;
+			case BIN_OP_MULTIPLY: calculated = left * right; break;
+			case BIN_OP_DIVIDE: calculated = left / right; break;
 		}
 		result->setDouble(i, calculated);
 	}
 	setEvalStack(stk, stk->last() - 1, result.get());
 }
 
+/* Apply an element-wise arithmetic operation to two native numeric arrays.
+ * Arrays must have identical lengths; neither source array is modified. */
+void eval_binary_operator_array_array(GLEArrayImpl* stk, int op, GLEMemoryCell* leftCell, GLEMemoryCell* rightCell) {
+	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE) {
+		complain_operator_type(op, GLEObjectTypeArray);
+		return;
+	}
+	GLEArrayImpl* left = static_cast<GLEArrayImpl*>(leftCell->Entry.ObjectVal);
+	GLEArrayImpl* right = static_cast<GLEArrayImpl*>(rightCell->Entry.ObjectVal);
+	if (left->size() != right->size()) {
+		std::ostringstream msg;
+		msg << "array arithmetic requires arrays of equal length ("
+			<< left->size() << " and " << right->size() << ")";
+		g_throw_parser_error(msg.str());
+	}
+	GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+	result->resize(left->size());
+	for (unsigned int i = 0; i < left->size(); ++i) {
+		GLEMemoryCell* leftElement = left->get(i);
+		GLEMemoryCell* rightElement = right->get(i);
+		if ((leftElement->Type != GLE_MC_DOUBLE && leftElement->Type != GLE_MC_INT) ||
+			(rightElement->Type != GLE_MC_DOUBLE && rightElement->Type != GLE_MC_INT)) {
+			std::ostringstream msg;
+			msg << "array arithmetic requires numeric elements (element " << (i + 1) << ")";
+			g_throw_parser_error(msg.str());
+		}
+		double a = leftElement->Type == GLE_MC_DOUBLE ? leftElement->Entry.DoubleVal : (double)leftElement->Entry.IntVal;
+		double b = rightElement->Type == GLE_MC_DOUBLE ? rightElement->Entry.DoubleVal : (double)rightElement->Entry.IntVal;
+		double calculated = 0.0;
+		switch (op) {
+			case BIN_OP_PLUS: calculated = a + b; break;
+			case BIN_OP_MINUS: calculated = a - b; break;
+			case BIN_OP_MULTIPLY: calculated = a * b; break;
+			case BIN_OP_DIVIDE: calculated = a / b; break;
+		}
+		result->setDouble(i, calculated);
+	}
+	setEvalStack(stk, stk->last() - 1, result.get());
+}
 void eval_binary_operator(GLEArrayImpl* stk, int op) {
 	// a OP b
 	GLEMemoryCell* a = stk->get(stk->last() - 1);
@@ -469,6 +511,8 @@ void eval_binary_operator(GLEArrayImpl* stk, int op) {
 		eval_binary_operator_array_scalar(stk, op, a, b->Entry.DoubleVal, false);
 	} else if (a_type == GLEObjectTypeDouble && b_type == GLEObjectTypeArray) {
 		eval_binary_operator_array_scalar(stk, op, b, a->Entry.DoubleVal, true);
+	} else if (a_type == GLEObjectTypeArray && b_type == GLEObjectTypeArray) {
+		eval_binary_operator_array_array(stk, op, a, b);
 	} else if (a_type == b_type) {
 		switch (a_type) {
 			case GLEObjectTypeDouble:
