@@ -1,131 +1,115 @@
 #
-# -- Windows - build GLE executable
-#     no manual or installer creation
-#     runs on commit
-#     binary installation folder saved
+# Windows CLI build for GLE.
+# The development mode builds the command-line executable and its runtime
+# resources without building unrelated targets. The full mode builds all
+# enabled targets. Qt/GUI is intentionally disabled: this fork is tested
+# through gle.exe and does not require qgle.exe.
 #
 name: Build Windows
+
 on:
   workflow_dispatch:
-  #pull_request:
-  #push:
-  #  branches: [main]
+    inputs:
+      build_mode:
+        description: "Development = CLI executable and runtime files; Full = all enabled targets"
+        required: true
+        type: choice
+        options:
+          - development
+          - full
+        default: development
+
 env:
   BUILD_TYPE: Release
   TRIPLET: x64-windows-static-release
-  MY_VCPKG_ROOT: d:/vp
- 
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-binary-cache
+  BUILD_MODE: ${{ inputs.build_mode }}
 
 jobs:
   build:
-    name: Build Windows
+    name: Build Windows (${{ inputs.build_mode }})
     runs-on: windows-latest
+
     steps:
+      - name: Set workspace path
+        shell: pwsh
+        run: |
+          "WS=${{ github.workspace }}".Replace('\\','/') >> $env:GITHUB_ENV
 
-    - name: Set WS as forward slashed workspace path
-      shell: pwsh
-      run: |
-        "WS=${{ github.workspace }}".Replace('\','/') >> $env:GITHUB_ENV
+      - name: Checkout GLE
+        uses: actions/checkout@v7
 
-    - name: Checkout GLE
-      uses: actions/checkout@v7
+      - name: Acquire vcpkg
+        uses: actions/checkout@v7
+        with:
+          repository: Microsoft/vcpkg
+          path: vcpkg
 
-    - name: Acquire vcpkg
-      uses: actions/checkout@v7
-      with:
-        repository: "Microsoft/vcpkg"
-        path: vcpkg
+      - name: Bootstrap vcpkg
+        shell: cmd
+        run: vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
-      # move to shorter path for Qt6
-    - name: Move Vcpkg to MY_VCPKG_ROOT
-      shell: pwsh
-      run: |
-          Move-Item -Path "$env:GITHUB_WORKSPACE\vcpkg" -Destination "${{env.MY_VCPKG_ROOT}}"
-          "VCPKG_ROOT=${{env.MY_VCPKG_ROOT}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      # Reuse compiled vcpkg packages between runs. The cache key includes
+      # the manifest and commit; the restore prefix lets later commits reuse
+      # packages built by an earlier run.
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-windows-${{ env.TRIPLET }}-${{ hashFiles('src/vcpkg.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcpkg-windows-${{ env.TRIPLET }}-${{ hashFiles('src/vcpkg.json') }}-
 
-    - name: Bootstrap vcpkg
-      run: "${{env.MY_VCPKG_ROOT}}/bootstrap-vcpkg.bat"
-      shell: cmd
+      - name: Setup Ghostscript
+        uses: ./.github/actions/setup-ghostscript-win
+        with:
+          checkout-ghostpdl: "true"
 
-    
-      # Ghostscript and GhostPDL header files needed for building of GLE
-    - name: Setup Ghostscript
-      uses: ./.github/actions/setup-ghostscript-win
-      with:
-        checkout-ghostpdl: "true"
+      - name: Configure CMake
+        working-directory: ${{ github.workspace }}
+        run: >
+          cmake -B build -S src
+          -DCMAKE_TOOLCHAIN_FILE=${{ env.WS }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ env.TRIPLET }}
+          -DVCPKG_MANIFEST_MODE=ON
+          -DVCPKG_MANIFEST_DIR=${{ env.WS }}/src
+          -DVCPKG_INSTALLED_DIR=${{ env.WS }}/build/vcpkg_installed
+          -DGHOSTPDL_ROOT=${{ env.WS }}/ghostpdl
+          -DMSVC_USE_STATIC_RUNTIME=ON
+          -DCMAKE_INSTALL_PREFIX=${{ env.WS }}/stage
+          -DGLE_EXAMPLES_LIBRARY_PATH="${{ env.WS }}/gle-library"
+          -DGLE_USER_MANUAL_PATH="${{ env.WS }}/gle-manual"
+          -DPOPPLER_INTERFACE=CPP
+          -DBUILD_GUI=OFF
+          -DBUILD_MANIP=OFF
+          -DBUILD_TESTS=ON
+        shell: cmd
 
-      # ensure ninja is the version needed
-    # - name: Ensure Ninja >= 1.13.1 (idempotent)
-    #   shell: pwsh
-    #   run: |
-    #    $required = [version]'1.13.1' $installedVer = [version]'0.0.0' if (Get-Command ninja -ErrorAction SilentlyContinue) { try { $verText = (ninja --version).Trim() $installedVer = [version]$verText } catch { Write-Host "Could not parse ninja --version output: (_.Exception.Message)" } } Write-Host "Installed: $installedVer, Required: $required" if ($installedVer -lt $required) { choco install ninja --version=1.13.1 -y refreshenv } ninja --version
+      - name: Build development targets
+        if: ${{ inputs.build_mode == 'development' }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --target inittex --parallel 4
+        shell: cmd
 
-    - name: Install ECM package using vcpkg
-      run: "${{env.MY_VCPKG_ROOT}}/vcpkg install ecm"
-      shell: cmd
+      - name: Build all enabled targets
+        if: ${{ inputs.build_mode == 'full' }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 4
+        shell: cmd
 
-    - name: Configure CMake
-      working-directory: ${{ github.workspace }}
-      env:
-        VCPKG_INSTALLED_DIR: ${{env.MY_VCPKG_ROOT}}
-      run: >
-        cmake -B build -S src
-        -DCMAKE_TOOLCHAIN_FILE=${{env.MY_VCPKG_ROOT}}/scripts/buildsystems/vcpkg.cmake
-        -DVCPKG_TARGET_TRIPLET=${{env.TRIPLET}}
-        -DGHOSTPDL_ROOT=${{ env.WS }}/ghostpdl
-        -DMSVC_USE_STATIC_RUNTIME=ON
-        -DCMAKE_INSTALL_PREFIX=${{ env.WS }}/stage
-        -DGLE_EXAMPLES_LIBRARY_PATH="${{ env.WS }}/gle-library"
-        -DGLE_USER_MANUAL_PATH="${{ env.WS }}/gle-manual"
-        -DECM_DIR="${{env.MY_VCPKG_ROOT}}/installed/x64-windows/share/ECM"
-        -DBUILD_TESTS=ON
-      shell: cmd
+      - name: Install
+        working-directory: ${{ github.workspace }}
+        run: |
+          cmake --install build --config ${{ env.BUILD_TYPE }}
+        shell: cmd
 
-    - name: Build
-      working-directory: ${{ github.workspace }}
-      run: |
-        cmake --build build --config ${{env.BUILD_TYPE}}
-      shell: cmd
-
-    - name: Install
-      working-directory: ${{ github.workspace }}
-      run: |
-        cmake --install build --config ${{env.BUILD_TYPE}}
-      shell: cmd
-
-    - name: Upload Artifacts - zip file of installation folder
-      uses: actions/upload-artifact@v7
-      with:
-        name: Windows Binaries
-        path: ${{github.workspace}}/stage
-        if-no-files-found: warn
-        retention-days: 0
-        compression-level: 0
-
-
-# for debugging
-    #- name: List directory
-    #  run: DIR /S "${{ github.workspace }}/build/vcpkg_installed/x64-windows-static-release/include/poppler"
-    #  shell: cmd
-
-
-# - name: Enable GitHub Actions Cache backend
-    #   uses: actions/github-script@v7
-    #   with:
-    #     script: |
-    #       core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-    #       core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-    #- name: Copy custom triplet to vcpkg
-    #  run: copy src\x64-windows-static-release-only.cmake vcpkg\triplets\
-     # shell: cmd
-
-    #- name: Install dependencies with custom buildtrees
-    #  working-directory: ${{ github.workspace }}/src
-    #  run: >
-      #   ..\vcpkg\vcpkg install
-      #   --x-buildtrees-root=${{env.VCPKG_BUILD_TREES_ROOT}}
-      #   --x-install-root=${{env.MY_VCPKG_ROOT}}
-      #   --x-packages-root=${{env.VCPKG_PACAKGES_ROOT}}
-      #   --triplet ${{env.TRIPLET}}
-      # shell: cmd
+      - name: Upload Windows binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: Windows Binaries
+          path: ${{ github.workspace }}/stage
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
