@@ -1,0 +1,30 @@
+size 12 12
+
+a[1] = 5
+a[2] = 1
+a[3] = 4
+a[4] = 2
+a[5] = 3
+
+! Explicit ascending: 1, 2, 3, 4, 5
+ascending = SORT(a, 1)
+print(ascending[1])
+print(ascending[2])
+print(ascending[3])
+print(ascending[4])
+print(ascending[5])
+
+! Descending: 5, 4, 3, 2, 1
+descending = SORT(a, -1)
+print(descending[1])
+print(descending[2])
+print(descending[3])
+print(descending[4])
+print(descending[5])
+
+! Original remains unchanged
+print(a[1])
+print(a[2])
+print(a[3])
+print(a[4])
+print(a[5])
