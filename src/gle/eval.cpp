@@ -776,7 +776,7 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				if (values.empty()) g_throw_parser_error("MIN is not defined for an empty array");
 				setEvalStack(stk, stk->last(), *std::min_element(values.begin(), values.end()));
 			} else {
-				if (stk->last() < 2) g_throw_parser_error("MIN requires an array or two scalar arguments");
+				if (stk->last() < 1) g_throw_parser_error("MIN requires an array or two scalar arguments");
 				stk->decrementSize(1);
 				if (getEvalStackDouble(stk, stk->last()+1) < getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
 			}
@@ -787,7 +787,7 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				if (values.empty()) g_throw_parser_error("MAX is not defined for an empty array");
 				setEvalStack(stk, stk->last(), *std::max_element(values.begin(), values.end()));
 			} else {
-				if (stk->last() < 2) g_throw_parser_error("MAX requires an array or two scalar arguments");
+				if (stk->last() < 1) g_throw_parser_error("MAX requires an array or two scalar arguments");
 				stk->decrementSize(1);
 				if (getEvalStackDouble(stk, stk->last()+1) > getEvalStackDouble(stk, stk->last())) setEvalStack(stk, stk->last(), getEvalStackDouble(stk, stk->last()+1));
 			}
