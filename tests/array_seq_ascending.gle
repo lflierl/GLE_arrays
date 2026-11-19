@@ -1,0 +1,10 @@
+size 12 12
+
+! SEQ(start, end): implicit positive step
+a = SEQ(1, 5)
+print(LEN(a))
+print(a[1])
+print(a[2])
+print(a[3])
+print(a[4])
+print(a[5])
