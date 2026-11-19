@@ -807,6 +807,53 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 		case FN_BUILTIN_MAGIC + FN_SD: /* sample standard deviation */
 			setEvalStack(stk, stk->last(), eval_array_statistic(stk, 5));
 			break;
+		case FN_BUILTIN_MAGIC + FN_SEQ: /* create a native numeric sequence */
+			{
+				/* The argument count is stored immediately after the SEQ opcode. */
+				int nbParams = pcode[++c];
+				int firstPos = stk->last() - nbParams + 1;
+				double start = getEvalStackDouble(stk, firstPos);
+				double end = getEvalStackDouble(stk, firstPos + 1);
+				double step = (nbParams == 3)
+					? getEvalStackDouble(stk, firstPos + 2)
+					: (end >= start ? 1.0 : -1.0);
+
+				if (!std::isfinite(start) || !std::isfinite(end) || !std::isfinite(step)) {
+					g_throw_parser_error("SEQ arguments must be finite numbers");
+				}
+				if (step == 0.0) {
+					g_throw_parser_error("SEQ step must not be zero");
+				}
+				if ((end > start && step < 0.0) || (end < start && step > 0.0)) {
+					g_throw_parser_error("SEQ step points away from the end value");
+				}
+
+				double ratio = (end - start) / step;
+				if (!std::isfinite(ratio) || ratio < 0.0) {
+					g_throw_parser_error("SEQ would create an invalid sequence");
+				}
+				/* The small tolerance makes mathematically exact endpoints robust
+				 * against floating-point representation (e.g. 0 to 1 by 0.1). */
+				double tolerance = 1e-12 * std::max(1.0, std::fabs(ratio));
+				double intervals = std::floor(ratio + tolerance);
+				if (intervals > 999999.0) {
+					g_throw_parser_error("SEQ would exceed the maximum array length (1000000)");
+				}
+				unsigned int count = (unsigned int)intervals + 1;
+
+				GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+				result->resize(count);
+				for (unsigned int i = 0; i < count; ++i) {
+					double value = start + (double)i * step;
+					if (!std::isfinite(value)) {
+						g_throw_parser_error("SEQ generated a non-finite value");
+					}
+					result->setDouble(i, value);
+				}
+				setEvalStack(stk, firstPos, result.get());
+				stk->decrementSize(nbParams - 1);
+			}
+			break;
 		case FN_BUILTIN_MAGIC + FN_SORT: /* sort a native numeric array */
 			{
 				/* With one argument the array is the top stack item. With two
