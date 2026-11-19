@@ -89,6 +89,7 @@
 #define FN_MEDIAN              142
 #define FN_SD                  143
 #define FN_VAR                 144
+#define FN_SORT                145
 
 struct keyw {
 	const char *word;
