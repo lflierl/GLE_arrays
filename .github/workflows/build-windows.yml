@@ -34,7 +34,7 @@ jobs:
       - name: Set workspace path
         shell: pwsh
         run: |
-          "WS=${{ github.workspace }}".Replace('\\','/') >> $env:GITHUB_ENV
+          "WS=${{ github.workspace }}".Replace('\','/') >> $env:GITHUB_ENV
 
       - name: Checkout GLE
         uses: actions/checkout@v7
