@@ -1,0 +1,11 @@
+! Repeated string categories map to the same categorical position.
+size 12 7.5
+x = SEQ(1,3)
+repeated = REP("PTB", 3)
+
+begin graph
+    ARRAYDATA d1 x repeated
+    d1 marker cross
+    xtitle "Measurement"
+    ytitle "Laboratory"
+end graph

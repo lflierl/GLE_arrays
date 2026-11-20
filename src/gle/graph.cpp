@@ -58,6 +58,8 @@
 #include "keyword.h"
 #include "run.h"
 
+#include <algorithm>
+
 using namespace std;
 
 #define GLEG_CMD_AXIS     1
@@ -2041,6 +2043,50 @@ void createDataSet(int dn) {
 	}
 }
 
+static bool array_data_read_numeric_or_string(
+	GLEVars* vars, int var, unsigned int index, double* numericValue, std::string* stringValue, bool* isString
+) {
+	GLEMemoryCell* cell = vars->getArrayElementCell(var, index);
+	if (cell->Type == GLE_MC_OBJECT &&
+		cell->Entry.ObjectVal != NULL &&
+		cell->Entry.ObjectVal->getType() == GLEObjectTypeString) {
+		GLEString* value = static_cast<GLEString*>(cell->Entry.ObjectVal);
+		*stringValue = value->toUTF8();
+		*isString = true;
+		return true;
+	}
+	if (gle_memory_cell_to_double(cell, numericValue)) {
+		*isString = false;
+		return true;
+	}
+	return false;
+}
+
+static void array_data_set_category_labels(int axis, const std::vector<std::string>& labels) {
+	if (labels.empty()) return;
+	if (xx[axis].getNamesDataSet() != -1 || !dp[0]->undefined()) {
+		g_throw_parser_error("ARRAYDATA: categorical string labels cannot be combined with existing axis-name data");
+	}
+	createDataSet(0);
+	GLEDataSet* namesDataSet = dp[0];
+	namesDataSet->clearAll();
+	namesDataSet->np = labels.size();
+	GLEArrayImpl* dimensions = namesDataSet->getData();
+	dimensions->ensure(2);
+	GLEArrayImpl* positions = new GLEArrayImpl();
+	GLEArrayImpl* names = new GLEArrayImpl();
+	dimensions->setObject(0, positions);
+	dimensions->setObject(1, names);
+	positions->ensure(labels.size());
+	names->ensure(labels.size());
+	for (unsigned int i = 0; i < labels.size(); ++i) {
+		positions->setDouble(i, i + 1);
+		names->setObject(i, new GLEString(labels[i]));
+	}
+	ensureDataSetCreatedAndSetUsed(0);
+	xx[axis].setNamesDataSet(0);
+}
+
 void array_data_command(GLESourceLine& sline) {
 	(void)sline;
 	if (ntk != 4) {
@@ -2052,7 +2098,6 @@ void array_data_command(GLESourceLine& sline) {
 	}
 
 	GLEVars* vars = getVarsInstance();
-	/* Variable names are stored uppercase by the assignment parser. */
 	std::string xName, yName;
 	str_to_uppercase(std::string(tk[3]), xName);
 	str_to_uppercase(std::string(tk[4]), yName);
@@ -2071,10 +2116,10 @@ void array_data_command(GLESourceLine& sline) {
 	GLEArrayImpl* xArray = vars->getArray(xVar, false);
 	GLEArrayImpl* yArray = vars->getArray(yVar, false);
 	if (xArray == NULL) {
-		g_throw_parser_error("ARRAYDATA: variable '", tk[3], "' is not an initialized numeric array");
+		g_throw_parser_error("ARRAYDATA: variable '", tk[3], "' is not an initialized array");
 	}
 	if (yArray == NULL) {
-		g_throw_parser_error("ARRAYDATA: variable '", tk[4], "' is not an initialized numeric array");
+		g_throw_parser_error("ARRAYDATA: variable '", tk[4], "' is not an initialized array");
 	}
 	if (xArray->size() == 0 || yArray->size() == 0) {
 		g_throw_parser_error("ARRAYDATA does not support empty arrays");
@@ -2084,7 +2129,6 @@ void array_data_command(GLESourceLine& sline) {
 		err << "ARRAYDATA arrays have different lengths (" << xArray->size() << " <> " << yArray->size() << ")";
 		g_throw_parser_error(err.str());
 	}
-
 	if (dp[dn] != NULL && !dp[dn]->undefined()) {
 		ostringstream err;
 		err << "ARRAYDATA: dataset d" << dn << " already contains data";
@@ -2093,9 +2137,60 @@ void array_data_command(GLESourceLine& sline) {
 
 	unsigned int np = xArray->size();
 	std::vector<double> xValues(np), yValues(np);
+	std::vector<std::string> xStrings(np), yStrings(np);
+	bool xIsString = false, yIsString = false;
+	std::vector<std::string> xLabels, yLabels;
 	for (unsigned int i = 0; i < np; ++i) {
-		xValues[i] = vars->getArrayElement(xVar, i + 1);
-		yValues[i] = vars->getArrayElement(yVar, i + 1);
+		bool thisIsString = false;
+		double value = 0.0;
+		std::string textValue;
+		if (!array_data_read_numeric_or_string(vars, xVar, i + 1, &value, &textValue, &thisIsString)) {
+			g_throw_parser_error("ARRAYDATA: x array must contain only numeric or only string elements");
+		}
+		if (i == 0) xIsString = thisIsString;
+		else if (xIsString != thisIsString) {
+			g_throw_parser_error("ARRAYDATA: x array cannot mix numeric and string elements");
+		}
+		if (thisIsString) xStrings[i] = textValue;
+		else xValues[i] = value;
+
+		if (!array_data_read_numeric_or_string(vars, yVar, i + 1, &value, &textValue, &thisIsString)) {
+			g_throw_parser_error("ARRAYDATA: y array must contain only numeric or only string elements");
+		}
+		if (i == 0) yIsString = thisIsString;
+		else if (yIsString != thisIsString) {
+			g_throw_parser_error("ARRAYDATA: y array cannot mix numeric and string elements");
+		}
+		if (thisIsString) yStrings[i] = textValue;
+		else yValues[i] = value;
+	}
+
+	if (xIsString && yIsString) {
+		g_throw_parser_error("ARRAYDATA: only one of the x and y arrays can contain strings; the other must be numeric");
+	}
+
+	// Convert a string dimension to category positions, preserving first-occurrence order.
+	if (xIsString) {
+		for (unsigned int i = 0; i < np; ++i) {
+			std::vector<std::string>::const_iterator it = std::find(xLabels.begin(), xLabels.end(), xStrings[i]);
+			if (it == xLabels.end()) {
+				xLabels.push_back(xStrings[i]);
+				xValues[i] = xLabels.size();
+			} else {
+				xValues[i] = (it - xLabels.begin()) + 1;
+			}
+		}
+	}
+	if (yIsString) {
+		for (unsigned int i = 0; i < np; ++i) {
+			std::vector<std::string>::const_iterator it = std::find(yLabels.begin(), yLabels.end(), yStrings[i]);
+			if (it == yLabels.end()) {
+				yLabels.push_back(yStrings[i]);
+				yValues[i] = yLabels.size();
+			} else {
+				yValues[i] = (it - yLabels.begin()) + 1;
+			}
+		}
 	}
 
 	createDataSet(dn);
@@ -2116,6 +2211,9 @@ void array_data_command(GLESourceLine& sline) {
 	}
 	ensureDataSetCreatedAndSetUsed(dn);
 	g_arrayDataSet[dn] = true;
+
+	if (xIsString) array_data_set_category_labels(GLE_AXIS_X, xLabels);
+	if (yIsString) array_data_set_category_labels(GLE_AXIS_Y, yLabels);
 }
 
 string dimension2String(unsigned int dimension) {

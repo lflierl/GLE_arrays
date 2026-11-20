@@ -1,0 +1,11 @@
+! ARRAYDATA accepts a string array as categorical x values.
+size 12 7.5
+categories = C("one", "two", "three")
+values = C(1, 2, 3)
+
+begin graph
+    ARRAYDATA d1 categories values
+    d1 marker cross
+    xtitle "Category"
+    ytitle "Value"
+end graph

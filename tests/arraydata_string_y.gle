@@ -1,0 +1,11 @@
+! ARRAYDATA accepts a string array as categorical y values.
+size 12 7.5
+x = SEQ(1,4)
+categories = C("PTB", "BAM", "PTB", "NIST")
+
+begin graph
+    ARRAYDATA d1 x categories
+    d1 marker cross
+    xtitle "Measurement"
+    ytitle "Laboratory"
+end graph
