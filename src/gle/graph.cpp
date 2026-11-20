@@ -2074,7 +2074,7 @@ static void array_data_map_categories(
 	int axis, const std::vector<std::string>& values, std::vector<double>& positions
 ) {
 	if (g_arrayCategoryAxis == -1) {
-		if (xx[axis].getNamesDataSet() != -1 || (dp[0] != NULL && !dp[0]->undefined())) {
+		if (xx[axis].getNamesDataSet() != -1) {
 			g_throw_parser_error("ARRAYDATA: categorical string labels cannot be combined with existing axis-name data");
 		}
 		g_arrayCategoryAxis = axis;

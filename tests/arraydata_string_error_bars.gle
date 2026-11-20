@@ -1,0 +1,16 @@
+! String categories can be shared by the data and error-bar datasets.
+size 12 7.5
+
+laboratories = C("PTB", "NRC", "BAM")
+results = C(12, 12.5, 12.6)
+errors = C(0.5, 0.4, 0.3)
+
+begin graph
+    ARRAYDATA d1 laboratories results
+    ARRAYDATA d2 laboratories errors
+    d1 marker cross
+    d1 err d2
+    xsubticks off
+    xtitle "Laboratory"
+    ytitle "Result"
+end graph
