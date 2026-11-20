@@ -29,7 +29,7 @@ env:
 
 jobs:
   build:
-    name: Build Windows (${{ inputs.build_mode }})
+    name: Build Windows (${{ inputs.build_mode || 'development' }})
     runs-on: windows-latest
 
     steps:
@@ -96,7 +96,7 @@ jobs:
         shell: cmd
 
       - name: Build development targets
-        if: ${{ inputs.build_mode == 'development' }}
+        if: ${{ inputs.build_mode == 'development' || github.event_name == 'push' }}
         working-directory: ${{ github.workspace }}
         run: |
           cmake --build build --config ${{ env.BUILD_TYPE }} --target gle glerc_file --parallel 4
