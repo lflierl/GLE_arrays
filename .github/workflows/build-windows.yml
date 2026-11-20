@@ -8,6 +8,9 @@
 name: Build Windows
 
 on:
+  push:
+    branches:
+      - array-math-v6.2
   workflow_dispatch:
     inputs:
       build_mode:

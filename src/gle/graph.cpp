@@ -2052,10 +2052,14 @@ void array_data_command(GLESourceLine& sline) {
 	}
 
 	GLEVars* vars = getVarsInstance();
+	/* Variable names are stored uppercase by the assignment parser. */
+	std::string xName, yName;
+	str_to_uppercase(std::string(tk[3]), xName);
+	str_to_uppercase(std::string(tk[4]), yName);
 	int xVar = -1, xType = 0;
 	int yVar = -1, yType = 0;
-	vars->find(tk[3], &xVar, &xType);
-	vars->find(tk[4], &yVar, &yType);
+	vars->find(xName, &xVar, &xType);
+	vars->find(yName, &yVar, &yType);
 	(void)xType;
 	(void)yType;
 	if (xVar == -1) {
