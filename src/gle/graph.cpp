@@ -87,6 +87,9 @@ GLERC<GLEColor> g_graph_background;
 
 int freedataset(int i);
 static bool g_arrayDataSet[MAX_NB_DATA] = { false };
+// Shared categorical labels for ARRAYDATA, reset for each graph block.
+static std::vector<std::string> g_arrayCategoryLabels[2];
+static int g_arrayCategoryAxis = -1;
 void free_temp(void);
 void set_sizelength(void);
 void draw_graph(KeyInfo* keyinfo, GLEGraphBlockInstance* graphBlock);
@@ -460,6 +463,9 @@ void begin_graph(GLEGraphBlockBase* graphBlockBase, GLEGraphBlockInstance* graph
 	g_get_hei(&g_fontsz);
 	set_sizelength();
 	for (int i = 0; i < MAX_NB_DATA; ++i) g_arrayDataSet[i] = false;
+	g_arrayCategoryLabels[0].clear();
+	g_arrayCategoryLabels[1].clear();
+	g_arrayCategoryAxis = -1;
 	dp[0] = new GLEDataSet(0);  /* dataset for default settings */
 }
 
@@ -2064,31 +2070,51 @@ static bool array_data_read_numeric_or_string(
 	return false;
 }
 
-static void array_data_set_category_labels(int axis, const std::vector<std::string>& labels) {
-	if (labels.empty()) return;
-	if (xx[axis].getNamesDataSet() != -1 || (dp[0] != NULL && !dp[0]->undefined())) {
-		g_throw_parser_error("ARRAYDATA: categorical string labels cannot be combined with existing axis-name data");
+static void array_data_map_categories(
+	int axis, const std::vector<std::string>& values, std::vector<double>& positions
+) {
+	if (g_arrayCategoryAxis == -1) {
+		if (xx[axis].getNamesDataSet() != -1 || (dp[0] != NULL && !dp[0]->undefined())) {
+			g_throw_parser_error("ARRAYDATA: categorical string labels cannot be combined with existing axis-name data");
+		}
+		g_arrayCategoryAxis = axis;
+		createDataSet(0);
+		xx[axis].setNamesDataSet(0);
+	} else if (g_arrayCategoryAxis != axis) {
+		g_throw_parser_error("ARRAYDATA: categorical strings can currently be used on only one axis within a graph");
 	}
+
+	std::vector<std::string>& categoryLabels = g_arrayCategoryLabels[axis - 1];
+	for (unsigned int i = 0; i < values.size(); ++i) {
+		std::vector<std::string>::const_iterator found =
+			std::find(categoryLabels.begin(), categoryLabels.end(), values[i]);
+		if (found == categoryLabels.end()) {
+			categoryLabels.push_back(values[i]);
+			positions[i] = categoryLabels.size();
+		} else {
+			positions[i] = (found - categoryLabels.begin()) + 1;
+		}
+	}
+
+	// GLE's existing names-data-set mechanism (d0) supplies the tick labels.
 	createDataSet(0);
 	GLEDataSet* namesDataSet = dp[0];
 	namesDataSet->clearAll();
-	namesDataSet->np = labels.size();
+	namesDataSet->np = categoryLabels.size();
 	GLEArrayImpl* dimensions = namesDataSet->getData();
 	dimensions->ensure(2);
-	GLEArrayImpl* positions = new GLEArrayImpl();
-	GLEArrayImpl* names = new GLEArrayImpl();
-	dimensions->setObject(0, positions);
-	dimensions->setObject(1, names);
-	positions->ensure(labels.size());
-	names->ensure(labels.size());
-	for (unsigned int i = 0; i < labels.size(); ++i) {
-		positions->setDouble(i, i + 1);
-		names->setObject(i, new GLEString(labels[i]));
+	GLEArrayImpl* labelPositions = new GLEArrayImpl();
+	GLEArrayImpl* labelNames = new GLEArrayImpl();
+	dimensions->setObject(0, labelPositions);
+	dimensions->setObject(1, labelNames);
+	labelPositions->ensure(categoryLabels.size());
+	labelNames->ensure(categoryLabels.size());
+	for (unsigned int i = 0; i < categoryLabels.size(); ++i) {
+		labelPositions->setDouble(i, i + 1);
+		labelNames->setObject(i, new GLEString(categoryLabels[i]));
 	}
 	ensureDataSetCreatedAndSetUsed(0);
-	xx[axis].setNamesDataSet(0);
 }
-
 void array_data_command(GLESourceLine& sline) {
 	(void)sline;
 	if (ntk != 4) {
@@ -2171,29 +2197,10 @@ void array_data_command(GLESourceLine& sline) {
 		g_throw_parser_error("ARRAYDATA: only one of the x and y arrays can contain strings; the other must be numeric");
 	}
 
-	// Convert a string dimension to category positions, preserving first-occurrence order.
-	if (xIsString) {
-		for (unsigned int i = 0; i < np; ++i) {
-			std::vector<std::string>::const_iterator it = std::find(xLabels.begin(), xLabels.end(), xStrings[i]);
-			if (it == xLabels.end()) {
-				xLabels.push_back(xStrings[i]);
-				xValues[i] = xLabels.size();
-			} else {
-				xValues[i] = (it - xLabels.begin()) + 1;
-			}
-		}
-	}
-	if (yIsString) {
-		for (unsigned int i = 0; i < np; ++i) {
-			std::vector<std::string>::const_iterator it = std::find(yLabels.begin(), yLabels.end(), yStrings[i]);
-			if (it == yLabels.end()) {
-				yLabels.push_back(yStrings[i]);
-				yValues[i] = yLabels.size();
-			} else {
-				yValues[i] = (it - yLabels.begin()) + 1;
-			}
-		}
-	}
+	// Map categorical values against the graph-wide category registry. This
+	// lets several ARRAYDATA datasets share one categorical axis consistently.
+	if (xIsString) array_data_map_categories(GLE_AXIS_X, xStrings, xValues);
+	if (yIsString) array_data_map_categories(GLE_AXIS_Y, yStrings, yValues);
 
 	createDataSet(dn);
 	GLEDataSet* dataset = dp[dn];
@@ -2214,8 +2221,7 @@ void array_data_command(GLESourceLine& sline) {
 	ensureDataSetCreatedAndSetUsed(dn);
 	g_arrayDataSet[dn] = true;
 
-	if (xIsString) array_data_set_category_labels(GLE_AXIS_X, xLabels);
-	if (yIsString) array_data_set_category_labels(GLE_AXIS_Y, yLabels);
+
 }
 
 string dimension2String(unsigned int dimension) {

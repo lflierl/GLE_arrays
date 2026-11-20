@@ -1,27 +1,34 @@
-ARRAYDATA string-array support (v6.5)
-======================================
+ARRAYDATA string-array support and shared categories (v6.5)
+===========================================================
 
-ARRAYDATA continues to store numeric coordinates internally. It now also
-accepts one categorical string dimension:
+ARRAYDATA keeps numeric coordinates internally and accepts one categorical
+string dimension:
 
-    categories = C("one", "two", "three")
-    values = C(1, 2, 3)
+    laboratories = C("PTB", "NRC", "BAM")
+    results = C(152, 2520, 253)
 
     begin graph
-        ARRAYDATA d1 categories values
+        ARRAYDATA d1 laboratories results
+        d1 marker cross
+        xsubticks off
     end graph
 
-String values are mapped to integer category positions in order of first
-appearance. The original strings are retained and displayed as tick labels.
-Repeated strings share the same category position.
+Strings are mapped to integer category positions in order of first appearance.
+The original strings are used as tick labels. Repeated strings share a position.
 
-The string array may be either the x array or the y array; the other array
-must be numeric. A single ARRAYDATA command cannot currently use strings
-for both dimensions. Arrays containing a mixture of numeric and string
-elements are rejected with a clear error. Existing numeric ARRAYDATA
-behaviour is unchanged.
+Multiple ARRAYDATA datasets may use string arrays on the same axis. Their
+categories share one graph-wide mapping: categories already seen retain their
+positions and previously unseen categories are appended. The numeric dimension
+can therefore differ between datasets while the categorical axis remains
+consistent.
+
+A single graph currently supports categorical strings on either x or y, but not
+both axes simultaneously. Existing axis-name data (for example, xnames from d1)
+cannot be combined with ARRAYDATA-managed category labels on that axis. Mixed
+numeric/string elements within one array are rejected.
 
 Tests:
 - arraydata_string_x.gle
 - arraydata_string_y.gle
 - arraydata_string_repeated.gle
+- arraydata_string_shared_axis.gle

@@ -1,0 +1,20 @@
+! Multiple ARRAYDATA datasets share one categorical x axis.
+! Categories are assigned positions globally in first-appearance order.
+size 12 7.5
+
+laboratories1 = C("PTB", "NRC", "BAM")
+results1 = C(152, 2520, 253)
+
+! PTB and BAM must retain their original positions; NIST is appended.
+laboratories2 = C("BAM", "PTB", "NIST")
+results2 = C(300, 160, 900)
+
+begin graph
+    ARRAYDATA d1 laboratories1 results1
+    ARRAYDATA d2 laboratories2 results2
+    d1 marker cross
+    d2 marker circle
+    xsubticks off
+    xtitle "Laboratory"
+    ytitle "Result"
+end graph
