@@ -20,7 +20,7 @@ Expected console values from the sequence/arithmetic checks:
     0.3
     0.6
     0.9
-    11.2
+    7.6
 
 The graph should contain three datasets: d1 and d3 from arrays, and d2
 from arraydata_file.dat. No sorting tests are included because sorting
