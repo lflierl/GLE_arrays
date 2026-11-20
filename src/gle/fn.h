@@ -91,6 +91,8 @@
 #define FN_VAR                 144
 #define FN_SORT                145
 #define FN_SEQ                 146
+#define FN_C                   147
+#define FN_REP                 148
 
 struct keyw {
 	const char *word;

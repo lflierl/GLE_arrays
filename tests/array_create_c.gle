@@ -1,0 +1,15 @@
+! v6.3: C() concatenates scalars and existing arrays.
+a = C(1, 2, 3)
+b = C(4, 5, 6, 7, 8, 9)
+c = C(a, 4, 5)
+d = C(a, b)
+
+print(LEN(a))
+print(SUM(a))
+print(LEN(b))
+print(b[6])
+print(LEN(c))
+print(c[4])
+print(c[5])
+print(LEN(d))
+print(d[9])

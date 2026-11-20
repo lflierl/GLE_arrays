@@ -114,12 +114,15 @@ int GLEPolish::get_params(GLEPcode& pcode, int np, int* plist, const string& nam
 	//gprint("get_params %d %d",np,np_default);
 	if (!m_tokens.is_next_token(")")) {
 		while (true) {
-			if (nb_param >= np) {
+			bool variadic = (name == "C");
+			if (!variadic && nb_param >= np) {
 				char err_str[100];
 				sprintf(err_str, "': found >= %d, expected %d to %d", nb_param+1, np-np_default,np);
 				throw error(string("too many parameters in call to '")+name+err_str);
 			}
-			int vtype = *(plist + nb_param);
+			/* C() accepts arbitrary scalar/array/string arguments. A generic
+			 * expression type keeps the constructor ready for string arrays. */
+			int vtype = variadic ? 0 : *(plist + nb_param);
 			internalPolish(pcode, &vtype);
 			int next_token = m_tokens.is_next_token_in(",)");
 			if (next_token == -1) {
@@ -237,7 +240,7 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 				int nb_params = get_params(pcode, np, plist, uc_token, optional_params);
 				pcode.addFunction(idx + FN_BUILTIN_MAGIC);
 				/* SEQ needs its actual argument count because all arguments are numeric. */
-				if (idx == FN_SEQ) pcode.addInt(nb_params);
+				if (idx == FN_SEQ || idx == FN_C) pcode.addInt(nb_params);
 				unary = 2;
 				break;
 			} else if (idx > 0 && idx <= 3) {

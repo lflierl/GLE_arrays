@@ -1,0 +1,2 @@
+! Expected error: REP count must be a non-negative integer.
+a = REP(7, 2.5)

@@ -1,0 +1,6 @@
+! The constructors preserve non-numeric element types, preparing for
+! future string-array indexing and string-aware operations.
+labels = C("one", "two", "three")
+repeated = REP("PTB", 3)
+print(LEN(labels))
+print(LEN(repeated))

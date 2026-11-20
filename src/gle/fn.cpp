@@ -86,6 +86,7 @@ struct keyw keywfn[] = {
 	{ "ATN",         4,             1,1, { 1,0,0,0,0 } }, // for backward coompatability same as ATAN
 	{ "BESSEL_FIRST",    		FN_BESSEL_FIRST,   		1,2, { 1,1,0,0,0 } },
 	{ "BESSEL_SECOND",   		FN_BESSEL_SECOND,  		1,2, { 1,1,0,0,0 } },
+	{ "C",           FN_C,         1,1, { 0,0,0,0,0 } },
 	{ "CHEBYSHEV_FIRST",   		FN_CHEBYSHEV_FIRST,  	1,2, { 1,1,0,0,0 } },
 	{ "CHEBYSHEV_SECOND",   	FN_CHEBYSHEV_SECOND,  	1,2, { 1,1,0,0,0 } },
 	{ "CHR$",        52,            2,1, { 1,0,0,0,0 } },

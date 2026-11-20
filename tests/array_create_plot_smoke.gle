@@ -1,0 +1,23 @@
+size 12 8
+
+! v6.3 smoke test: C, REP, nested-array flattening, and ARRAYDATA.
+x = C(1, 2, 3, 4)
+y = C(1, 4, 9, 16)
+z = REP(2, 4)
+combined = C(x, REP(5, 2))
+
+print(LEN(x))
+print(SUM(y))
+print(LEN(combined))
+print(combined[6])
+print(LEN(z))
+
+begin graph
+    title "GLE arrays v6.3 construction test"
+    xtitle "x"
+    ytitle "y"
+    arraydata d1 x y
+    arraydata d2 x z
+    d1 line marker
+    d2 line
+end graph

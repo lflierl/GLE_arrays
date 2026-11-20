@@ -524,6 +524,25 @@ std::vector<double> eval_get_numeric_array(GLEMemoryCell* cell) {
 	return values;
 }
 
+/* Append a cell to a constructed array, flattening nested arrays.
+ * GLE_MC cell copying preserves the original element type and object ownership. */
+static void eval_append_array_cell(GLEArrayImpl* destination, const GLEMemoryCell* cell) {
+	if (cell->Type == GLE_MC_OBJECT && cell->Entry.ObjectVal != NULL &&
+		cell->Entry.ObjectVal->getType() == GLEObjectTypeArray) {
+		GLEArrayImpl* source = static_cast<GLEArrayImpl*>(cell->Entry.ObjectVal);
+		for (unsigned int i = 0; i < source->size(); ++i) {
+			eval_append_array_cell(destination, source->get(i));
+		}
+		return;
+	}
+	if (destination->size() >= 1000000) {
+		g_throw_parser_error("array construction would exceed the maximum array length (1000000)");
+	}
+	unsigned int position = destination->size();
+	destination->ensure(position + 1);
+	destination->set(position, cell);
+}
+
 double eval_array_statistic(GLEArrayImpl* stk, int operation) {
 	std::vector<double> values = eval_get_numeric_array(stk->get(stk->last()));
 	if (values.empty()) {
@@ -852,6 +871,55 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				}
 				setEvalStack(stk, firstPos, result.get());
 				stk->decrementSize(nbParams - 1);
+			}
+			break;
+		case FN_BUILTIN_MAGIC + FN_C: /* concatenate values and flatten arrays */
+			{
+				int nbParams = pcode[++c];
+				if (nbParams < 1) g_throw_parser_error("C requires at least one argument");
+				int firstPos = stk->last() - nbParams + 1;
+				GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+				for (int i = 0; i < nbParams; ++i) {
+					eval_append_array_cell(result.get(), stk->get(firstPos + i));
+				}
+				setEvalStack(stk, firstPos, result.get());
+				stk->decrementSize(nbParams - 1);
+			}
+			break;
+		case FN_BUILTIN_MAGIC + FN_REP: /* repeat a scalar or array value */
+			{
+				int countPos = stk->last();
+				int valuePos = countPos - 1;
+				double countValue = getEvalStackDouble(stk, countPos);
+				if (!std::isfinite(countValue) || countValue < 0.0 ||
+					std::floor(countValue) != countValue) {
+					g_throw_parser_error("REP count must be a non-negative integer");
+				}
+				if (countValue > 1000000.0) {
+					g_throw_parser_error("REP would exceed the maximum array length (1000000)");
+				}
+				GLEMemoryCell* valueCell = stk->get(valuePos);
+				GLEArrayImpl* source = NULL;
+				if (valueCell->Type == GLE_MC_OBJECT && valueCell->Entry.ObjectVal != NULL &&
+					valueCell->Entry.ObjectVal->getType() == GLEObjectTypeArray) {
+					source = static_cast<GLEArrayImpl*>(valueCell->Entry.ObjectVal);
+				}
+				unsigned int sourceLength = source == NULL ? 1 : source->size();
+				if (sourceLength > 0 && countValue > 1000000.0 / sourceLength) {
+					g_throw_parser_error("REP would exceed the maximum array length (1000000)");
+				}
+				GLERC<GLEArrayImpl> result(new GLEArrayImpl());
+				for (unsigned int repeat = 0; repeat < (unsigned int)countValue; ++repeat) {
+					if (source == NULL) {
+						eval_append_array_cell(result.get(), valueCell);
+					} else {
+						for (unsigned int i = 0; i < source->size(); ++i) {
+							eval_append_array_cell(result.get(), source->get(i));
+						}
+					}
+				}
+				setEvalStack(stk, valuePos, result.get());
+				stk->decrementSize(1);
 			}
 			break;
 		case FN_BUILTIN_MAGIC + FN_SORT: /* sort a native numeric array */
