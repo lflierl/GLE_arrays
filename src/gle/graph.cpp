@@ -2055,7 +2055,9 @@ static bool array_data_read_numeric_or_string(
 		*isString = true;
 		return true;
 	}
-	if (gle_memory_cell_to_double(cell, numericValue)) {
+	if (cell->Type == GLE_MC_DOUBLE || cell->Type == GLE_MC_INT) {
+		*numericValue = cell->Type == GLE_MC_DOUBLE
+			? cell->Entry.DoubleVal : (double)cell->Entry.IntVal;
 		*isString = false;
 		return true;
 	}
@@ -2064,7 +2066,7 @@ static bool array_data_read_numeric_or_string(
 
 static void array_data_set_category_labels(int axis, const std::vector<std::string>& labels) {
 	if (labels.empty()) return;
-	if (xx[axis].getNamesDataSet() != -1 || !dp[0]->undefined()) {
+	if (xx[axis].getNamesDataSet() != -1 || (dp[0] != NULL && !dp[0]->undefined())) {
 		g_throw_parser_error("ARRAYDATA: categorical string labels cannot be combined with existing axis-name data");
 	}
 	createDataSet(0);
