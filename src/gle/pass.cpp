@@ -1303,7 +1303,6 @@ void GLEParser::passt(GLESourceLine &SLine, GLEPcode& pcode) {
 				checkValidName(first, "variable", pos_first);
 				pcode.addInt(57); // reserved command code for native array assignment
 				var_findadd((char*)first.c_str(), &vidx, &vtype);
-				if (vtype == 2) throw error(pos_first, "string variables cannot be indexed as numeric arrays");
 				pcode.addInt(vidx);
 				get_exp(pcode);
 				if (!tokens->is_next_token("]")) throw error("expected ']' after array index");

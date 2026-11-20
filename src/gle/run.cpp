@@ -663,7 +663,7 @@ void GLERun::do_pcode(GLESourceLine &sline, int *srclin, int *pcode, int plen, i
 			readlong(jj);
 			getVars()->set(jj, evalGeneric(getStack(), getPcodeList(), pcode, &cp));
 			break;
-		  case 57: /* Native numeric array element assignment */
+		  case 57: /* Native array element assignment */
 			{
 				readlong(jj);
 				GLEMemoryCell* indexCell = evalGeneric(getStack(), getPcodeList(), pcode, &cp);
@@ -673,11 +673,7 @@ void GLERun::do_pcode(GLESourceLine &sline, int *srclin, int *pcode, int plen, i
 				}
 				int arrayIndex = (int)indexValue;
 				GLEMemoryCell* valueCell = evalGeneric(getStack(), getPcodeList(), pcode, &cp);
-				double arrayValue = 0.0;
-				if (!gle_memory_cell_to_double(valueCell, &arrayValue)) {
-					g_throw_parser_error("numeric array elements can only be assigned numeric values");
-				}
-				getVars()->setArrayElement(jj, arrayIndex, arrayValue);
+				getVars()->setArrayElementCell(jj, arrayIndex, valueCell);
 			}
 			break;
 		  case 5:  /* BEGIN box | path | scale | rotate | EXTERNAL */

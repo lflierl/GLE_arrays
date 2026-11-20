@@ -157,6 +157,8 @@ public:
 	GLEArrayImpl* getArray(int var, bool create);
 	double getArrayElement(int var, int index);
 	void setArrayElement(int var, int index, double value);
+	GLEMemoryCell* getArrayElementCell(int var, int index);
+	void setArrayElementCell(int var, int index, const GLEMemoryCell* value);
 	void set(int var, GLEMemoryCell* value);
 	void get(int var, GLEMemoryCell* value);
 	void init(int var, int type);

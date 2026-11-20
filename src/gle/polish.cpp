@@ -320,7 +320,7 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 			if (v >= 0) {
 				//cout << "found var: '" << uc_token << "' -> " << v << " " <<ret<<endl;
 				if (m_tokens.is_next_token("[")) {
-					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
+					if (ret == 2) throw error(token_col, "string scalar variables cannot be indexed as native arrays");
 					pcode.addDouble((double)v);
 					get_array_index(pcode);
 					pcode.addFunction(181); // Native array element read
@@ -370,7 +370,7 @@ void GLEPolish::internalPolish(GLEPcode& pcode, int *rtype) {
 				}
 				var_findadd((char*)uc_token.c_str(), &v, &ret);
 				if (m_tokens.is_next_token("[")) {
-					if (ret == 2) throw error(token_col, "string variables cannot be indexed as numeric arrays");
+					if (ret == 2) throw error(token_col, "string scalar variables cannot be indexed as native arrays");
 					pcode.addDouble((double)v);
 					get_array_index(pcode);
 					pcode.addFunction(181); // Native array element read

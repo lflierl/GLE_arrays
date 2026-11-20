@@ -435,7 +435,7 @@ void eval_unary_operator(GLEArrayImpl* stk, int op)
 /* Apply an element-wise arithmetic operation to a native numeric array and a scalar.
  * The source array is never modified; the expression produces a new array. */
 void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell* arrayCell, double scalar, bool scalarOnLeft) {
-	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE) {
+	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE && op != BIN_OP_POW) {
 		complain_operator_type(op, GLEObjectTypeArray);
 		return;
 	}
@@ -458,6 +458,7 @@ void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell*
 			case BIN_OP_MINUS: calculated = left - right; break;
 			case BIN_OP_MULTIPLY: calculated = left * right; break;
 			case BIN_OP_DIVIDE: calculated = left / right; break;
+			case BIN_OP_POW: calculated = pow(left, right); break;
 		}
 		result->setDouble(i, calculated);
 	}
@@ -467,7 +468,7 @@ void eval_binary_operator_array_scalar(GLEArrayImpl* stk, int op, GLEMemoryCell*
 /* Apply an element-wise arithmetic operation to two native numeric arrays.
  * Arrays must have identical lengths; neither source array is modified. */
 void eval_binary_operator_array_array(GLEArrayImpl* stk, int op, GLEMemoryCell* leftCell, GLEMemoryCell* rightCell) {
-	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE) {
+	if (op != BIN_OP_PLUS && op != BIN_OP_MINUS && op != BIN_OP_MULTIPLY && op != BIN_OP_DIVIDE && op != BIN_OP_POW) {
 		complain_operator_type(op, GLEObjectTypeArray);
 		return;
 	}
@@ -498,6 +499,7 @@ void eval_binary_operator_array_array(GLEArrayImpl* stk, int op, GLEMemoryCell* 
 			case BIN_OP_MINUS: calculated = a - b; break;
 			case BIN_OP_MULTIPLY: calculated = a * b; break;
 			case BIN_OP_DIVIDE: calculated = a / b; break;
+			case BIN_OP_POW: calculated = pow(a, b); break;
 		}
 		result->setDouble(i, calculated);
 	}
@@ -1066,7 +1068,7 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				setEvalStack(stk, stk->last(), pt.getY());
 			}
 			break;
-		case 181: /* Native numeric array element read; stack: variable index, array index */
+		case 181: /* Native array element read; stack: variable index, array index */
 			{
 				double indexValue = getEvalStackDouble(stk, stk->last());
 				double varValue = getEvalStackDouble(stk, stk->last()-1);
@@ -1076,9 +1078,9 @@ void eval_pcode_loop(GLEArrayImpl* stk, GLEPcodeList* pclist, int *pcode, int pl
 				if (!std::isfinite(varValue) || varValue != floor(varValue) || varValue < 0.0 || varValue > 536870911.0) {
 					g_throw_parser_error("invalid internal array variable index");
 				}
-				double value = getVarsInstance()->getArrayElement((int)varValue, (int)indexValue);
+				GLEMemoryCell* value = getVarsInstance()->getArrayElementCell((int)varValue, (int)indexValue);
+				stk->set(stk->last()-1, value);
 				stk->decrementSize(1);
-				setEvalStack(stk, stk->last(), value);
 			}
 			break;
 		case 139: /* format$ */

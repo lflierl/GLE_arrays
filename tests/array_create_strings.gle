@@ -1,6 +1,25 @@
-! The constructors preserve non-numeric element types, preparing for
-! future string-array indexing and string-aware operations.
+! v6.4: native arrays preserve and expose string elements.
 labels = C("one", "two", "three")
 repeated = REP("PTB", 3)
+
 print(LEN(labels))
 print(LEN(repeated))
+print(labels[1])
+print(labels[2])
+print(labels[3])
+print(repeated[2])
+
+! Replace an existing string element.
+labels[2] = "two updated"
+print(labels[2])
+
+! Grow the array by assigning a new string at the next index.
+labels[4] = "four"
+print(LEN(labels))
+print(labels[4])
+
+! Mixed element types are retained without coercion.
+mixed = C("alpha", 2, "omega")
+print(mixed[1])
+print(mixed[2])
+print(mixed[3])

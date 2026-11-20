@@ -467,6 +467,47 @@ void GLEVars::setArrayElement(int var, int index, double value) {
 	array->setDouble((unsigned int)index - 1, value);
 }
 
+/* Generic element access keeps the native array's original GLE cell type.
+ * This allows strings, numbers, booleans, and other GLE objects to coexist. */
+GLEMemoryCell* GLEVars::getArrayElementCell(int var, int index) {
+	validateNativeArrayIndex(index);
+	GLEArrayImpl* array = getArray(var, false);
+	if (array == NULL) {
+		std::ostringstream msg;
+		msg << "variable '" << getName(var) << "' is not an initialized array";
+		g_throw_parser_error(msg.str());
+	}
+	if (index > (int)array->size()) {
+		std::ostringstream msg;
+		msg << "array index " << index << " is out of range (array size is " << array->size() << ")";
+		g_throw_parser_error(msg.str());
+	}
+	GLEMemoryCell* cell = array->get(index - 1);
+	if (cell->Type == GLE_MC_UNKNOWN) {
+		std::ostringstream msg;
+		msg << "array element " << index << " is uninitialized";
+		g_throw_parser_error(msg.str());
+	}
+	return cell;
+}
+
+void GLEVars::setArrayElementCell(int var, int index, const GLEMemoryCell* value) {
+	validateNativeArrayIndex(index);
+	if (value == NULL || value->Type == GLE_MC_UNKNOWN) {
+		g_throw_parser_error("cannot assign an uninitialized value to an array element");
+	}
+	GLEArrayImpl* array = getArray(var, true);
+	unsigned int oldSize = array->size();
+	if ((unsigned int)index > oldSize) {
+		array->resize((unsigned int)index);
+		/* Preserve the established numeric-zero behaviour for skipped indices. */
+		for (unsigned int i = oldSize; i < (unsigned int)index - 1; ++i) {
+			if (array->isUnknown(i)) array->setDouble(i, 0.0);
+		}
+	}
+	array->set((unsigned int)index - 1, value);
+}
+
 void GLEVars::init(int var, int type) {
 	if (check(&var)) {
 		if (type == 2) local_var->values.setObject(var, new GLEString());

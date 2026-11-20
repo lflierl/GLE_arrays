@@ -1,0 +1,3 @@
+! Expected error: exponentiation requires numeric array elements.
+labels = C("one", "two")
+invalid = labels^2
